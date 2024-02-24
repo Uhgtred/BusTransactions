@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # @author: Markus Kösters
 
+import inspect
+
 from .BusPlugins import BusPluginInterface
 from .Encoding.BusEncodings import EncodingProtocol
 
@@ -24,8 +26,7 @@ class Bus:
         Read and decode a single message from the bus.
         :return: Decoded message in string format.
         """
-        message = self.bus.readBus()
-        return self.encoding.decode(message)
+        return self.encoding.decode(self.bus.readBus())
 
     def readBusUntilStopFlag(self, callbackMethod: callable, stopFlag: bool = False) -> None:
         """
@@ -34,18 +35,31 @@ class Bus:
                                 Needs to accept one argument which is the message read from the bus.
         :param stopFlag: When true reading-loop stops.
         """
-        if not stopFlag:
-            message = self.bus.readBus()
-            callbackMethod(self.encoding.decode(message))
-            self.readBusUntilStopFlag(callbackMethod, self.stopFlag)
+        self.__callBackHasInputArg(callbackMethod)
+        while not stopFlag:
+            callbackMethod(self.encoding.decode(self.bus.readBus()))
+
+    @staticmethod
+    def __callBackHasInputArg(callbackMethod: callable):
+        """
+        Method that is making sure, the callback-method provided to the bus fulfills the requirements.
+        :param callbackMethod: Method that will be checked for compliance.
+        """
+        # checking if the method is callable. Else raising an error.
+        if callable(callbackMethod):
+            inputArgs = inspect.signature(callbackMethod)
+            # checking if the method accepts at least one argument. Else raising an error.
+            if len(inputArgs.parameters) < 1:
+                raise TypeError("Callback-method missing required input argument.")
+        else:
+            raise TypeError("Callback-method is not callable.")
 
     def writeSingleMessage(self, message: any) -> None:
         """
         Sending an encoded message to the bus.
         :param message: Message that will be sent to the bus.
         """
-        encodedMessage = self.encoding.encode(message)
-        self.bus.writeBus(encodedMessage)
+        self.bus.writeBus(self.encoding.encode(message))
 
     @property
     def stopFlag(self) -> bool:
