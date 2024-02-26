@@ -37,7 +37,7 @@ class Bus:
         """
         self.__callBackHasInputArg(callbackMethod)
         while not stopFlag:
-            callbackMethod(self.encoding.decode(self.bus.readBus()))
+            callbackMethod(self.readSingleMessage())
 
     @staticmethod
     def __callBackHasInputArg(callbackMethod: callable):
