@@ -1,0 +1,44 @@
+@startuml
+hide empty members
+
+' Define layers using different styles and grouping
+package "BusTransactions" {
+    ' Core layer
+    together {
+        abstract class AbstractBus
+        class ConreteBus
+        ConreteBus -l-|> AbstractBus: <<implement>>
+    }
+
+    ' Builder layer
+    together {
+        class BusBuilder
+        class DefaultBusFactory
+        BusBuilder --|> ConreteBus: <<create>>
+        DefaultBusFactory --> BusBuilder: <<use>>
+    }
+
+    ' Protocols layer
+    together {
+        package "Encoding" {
+            protocol EncodingProtocol
+        }
+        package "BusPlugins" {
+            interface BusPluginInterface
+        }
+        package "Compression" {
+            protocol CompressionProtocol
+        }
+        package "Serialization" {
+            protocol SerializationProtocol
+        }
+    }
+
+    ' Connections between layers
+    AbstractBus "1" .u.|> "1" BusPluginInterface
+    AbstractBus "1" o-- "1" EncodingProtocol
+    AbstractBus "1" o-- "1" CompressionProtocol
+    AbstractBus "1" o-- "1" SerializationProtocol
+}
+
+@enduml

@@ -3,21 +3,19 @@
 
 import unittest
 
-from BusTransactions import BusPluginFactory, Bus
-from BusTransactions import Encoding
-from BusTransactions.BusFactory import BusFactory
-from BusTransactions.BusPlugins.SerialBusPlugin.test_UnitTests.SerialBusMock import MockSerialBus
+from BusTransactions.AbstractBus import AbstractBus
+from BusTransactions.BusPlugins.SerialBusPlugin.UnitTests.SerialBusMock import MockSerialBus
+from BusTransactions.DefaultBusFactory import DefaultBusFactory
 
 
-class test_BusFactory(unittest.TestCase):
-    busFactory = BusFactory()
+class MyTestCase(unittest.TestCase):
+
+    busFactory = DefaultBusFactory()
     mockLibrary = MockSerialBus
 
     def test_produceBusTransceiver(self):
-        encoding = Encoding.EncodingFactory.arduinoSerialEncoding
-        bus = BusPluginFactory.produceSerialBusPlugin(path='test', baudRate=1234, stub=True)
-        transceiver = self.busFactory.produceBusTransceiver(bus, encoding)
-        self.assertIsInstance(transceiver, Bus)
+        transceiver: AbstractBus = self.busFactory.produceUDP_TransceiverWithStub(1234)
+        self.assertIsInstance(transceiver, AbstractBus)
 
 
 if __name__ == '__main__':

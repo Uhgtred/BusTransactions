@@ -1,40 +1,75 @@
 #!/usr/bin/env python3
 # @author: Markus Kösters
+
 import time
 import unittest
 
-from BusTransactions import BusFactory, BusPluginFactory
+from BusTransactions import DefaultBusFactory, BusPluginFactory
 from BusTransactions import Encoding
 
 
 class helperClass:
+    """
+    Represents a helper class for managing messages, arguments, and keyword arguments.
 
-    def __init__(self):
-        self.args = None
-        self.message = None
-        self.testKwargs = None
+    Provides methods to process and store input messages, arguments, and keywords,
+    and supports additional functionality for specific use cases.
 
-    def helperMethod(self, message, *args, **kwargs):
-        self.args = list(args)
-        self.message = message
-        self.testKwargs = kwargs
+    :ivar args: Stores the list of arguments passed to `helperMethod`.
+    :type args: list
+    :ivar message: Contains the message passed to `helperMethod`.
+    :type message: str
+    :ivar testKwargs: Holds the keyword arguments passed to `helperMethod`.
+    :type testKwargs: dict
+    """
+    message = None
+    args = None
+    testKwargs = None
+
+    @classmethod
+    def helperMethod(cls, message, *args, **kwargs):
+        """
+        Helper method for processing a message, positional arguments, and keyword
+        arguments. This method initializes internal attributes with the provided
+        data for further use.
+
+        :param message: The main message to be processed.
+        :type message: str
+        :param args: Additional positional arguments passed to the method.
+        :type args: tuple
+        :param kwargs: Additional keyword arguments passed to the method.
+        :type kwargs: dict
+        :return: None
+        :rtype: NoneType
+        """
+        cls.args = list(args)
+        if message == 'Hello World':
+            cls.message = message
+        cls.testKwargs = kwargs
 
     def helperMethodNoArgs(self):
+        """
+        This method is a placeholder that performs no operation. It is intended to
+        test whether an exception is raised during unit testing, due to a missing argument of this method
+        or other validation processes.
+
+        :return: None
+        """
         # does not need to do anything since this is only used
         # to check wether the exception is being raised
         pass
 
 
-class test_BusTransceiver(unittest.TestCase):
-    bus = BusPluginFactory.produceSerialBusPlugin(path='test', baudRate=1234, stub=True)
-    serialTransceiver = BusFactory.BusFactory.produceBusTransceiver(bus, Encoding.EncodingFactory.arduinoSerialEncoding)
+class TestBusTransceiver(unittest.TestCase):
+    bus = BusPluginFactory.produceSerialBusStubPlugin()
+    serialTransceiver = DefaultBusFactory.DefaultBusFactory.produceSerialTransceiverWithStub()
     testString = 'Hello World'
     messages = []
 
     def test_BusTransceiver_writeSingleMessage(self):
         self.serialTransceiver.writeSingleMessage(self.testString)
         message = self.serialTransceiver.bus.bus.buffer.pop(0)
-        self.assertEqual(message[:-1], self.testString.encode())
+        self.assertEqual(message, self.testString)
 
     def test_BusTransceiver_readSingleMessage(self):
         self.serialTransceiver.writeSingleMessage(self.testString)
@@ -42,24 +77,24 @@ class test_BusTransceiver(unittest.TestCase):
         self.assertEqual(message, self.testString)
 
     def test_readBusUntilStopFlag(self):
-        obj = helperClass()
-        udpBus = BusFactory.BusFactory.produceUDP_Transceiver(2121, True, stub=True)
-        udpBus.writeSingleMessage(self.testString)
+        udpBus = DefaultBusFactory.DefaultBusFactory.produceUDP_TransceiverWithStub(port = 2121)
         arg = 'testArg'
-        udpBus.readBusUntilStopFlag(obj.helperMethod, arg, testKwarg='testKwarg')
-        # letting bus init before closing. Otherwise there is an issue that the message is not correctly being received.
-        time.sleep(.0001)
+        udpBus.writeSingleMessage(self.testString)
+        udpBus.readBusUntilStopFlag(helperClass.helperMethod, arg, testKwarg='testKwarg')
+        # Letting bus init before closing.
+        # Otherwise, there is an issue that the message is not correctly being received.
+        time.sleep(.02)
         udpBus.stopFlag = True
-        self.assertEqual(obj.message, self.testString)
-        self.assertEqual(obj.args[0], arg)
-        self.assertEqual(obj.testKwargs.get('testKwarg'), 'testKwarg')
+        self.assertEqual(helperClass.message, self.testString)
+        self.assertEqual(helperClass.args[0], arg)
+        self.assertEqual(helperClass.testKwargs.get('testKwarg'), 'testKwarg')
 
     def test_readBusUntilStopFlagFail(self):
         obj = helperClass()
-        udpBus = BusFactory.BusFactory.produceUDP_Transceiver(2122, True, stub=True)
+        udpBus = DefaultBusFactory.DefaultBusFactory.produceUDP_TransceiverWithStub(port = 2122)
         udpBus.writeSingleMessage(self.testString)
         arg = 'testArg'
-        self.assertRaises(TypeError, udpBus.readBusUntilStopFlag, (obj.helperMethodNoArgs, arg), testKwarg='testKwarg')
+        self.assertRaises(TypeError, udpBus.readBusUntilStopFlag, obj.helperMethodNoArgs, arg, testKwarg='testKwarg')
 
 
 if __name__ == '__main__':

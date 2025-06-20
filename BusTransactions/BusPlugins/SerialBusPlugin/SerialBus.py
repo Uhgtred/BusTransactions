@@ -35,12 +35,12 @@ class SerialBus(BusPluginInterface):
         """
         self.bus.write(message)
 
-    def _setupBus(self, bus: serial.Serial) -> object:
+    def _setupBus(self, bus: type(serial.Serial)) -> type(serial.Serial):
         """
         Initializing the microcontroller bus-settings.
         """
-        bus.baudrate = self.__baudRate
-        bus.port = self.__port
+        bus.baudrate = self.__baudRate  # baudrate is of type int
+        bus.port = self.__port  # port is of type str
         if not bus.is_open:
             bus.open()
         return bus
@@ -51,10 +51,15 @@ class SerialBus(BusPluginInterface):
         :param config: Dictionary containing the information about the bus.
         """
         # check if the busLibrary-object has already been instanced
-        if callable(config.busLibrary):
-            bus = config.busLibrary()
-        else:
-            bus = config.busLibrary
-        self.__port = config.port
-        self.__baudRate = config.baudRate
-        self.bus: serial.Serial = self._setupBus(bus)
+        bus: type(serial.Serial) = config.busLibrary() if callable(config.busLibrary) else config.busLibrary
+        self.__port: str = config.port
+        self.__baudRate: int = config.baudRate
+        self.bus: type(serial.Serial) = self._setupBus(bus)
+
+    def close(self) -> None:
+        try:
+            self.__logger.info(f"Serialbus [{self.bus}] is being closed!")
+            self.bus.close()
+        except Exception as exception:
+            self.__logger.warning(f"Serialbus [{self.bus}] could not be closed properly! "
+                                  f"Original Error-message: {exception}")
